@@ -38,7 +38,7 @@ print('如果您的订阅地址有误，请删除或编辑 '+subFilePath)
 print("\n开始从订阅地址中读取服务器节点… 如等待时间过久，请检查网络。\n")
 
 # 获取订阅信息
-serverListLink = base64.b64decode(requests.get(subLink).content).splitlines()
+serverListLink = base64.b64decode(requests.get(subLink).text + "===").splitlines()
 for i in range(len(serverListLink)):
     serverNode = json.loads(base64.b64decode(bytes.decode(serverListLink[i]).replace('vmess://','')))
     print('【' + str(i) + '】' + serverNode['ps'])
@@ -53,23 +53,60 @@ while True:
 # 编辑 v2ray 配置文件
 v2rayConf = {
   "inbound": {
-    "port": 1080,
+    "port": 10808,
     "listen": "127.0.0.1",
     "protocol": "socks",
-    "settings": {
-      "udp": True
+	"sniffing": {
+        "enabled": True,
+        "destOverride": [
+          "http",
+          "tls"
+        ]
+    },
+	"settings": {
+		"auth": "noauth",
+        "udp": True,
+		"ip": "127.0.0.1"
     }
   },
   "outbound": {
+    "tag": "proxy",
     "protocol": "vmess",
-    "settings": {
-      "vnext": [{
-        "address": serverListLink[setServerNodeId]['add'],
-        "port": int(serverListLink[setServerNodeId]['port']),
-        "users": [{ "id": serverListLink[setServerNodeId]['id'] }]
-      }]
-    }
-  },
+    "settings":{ 
+        "vnext": [
+          {
+            "address": serverListLink[setServerNodeId]['add'],
+            "port": int(serverListLink[setServerNodeId]['port']),
+            "users": [
+              {
+                "id": serverListLink[setServerNodeId]['id'],
+                "alterId": int(serverListLink[setServerNodeId]['aid']),
+				"security": "auto"
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": serverListLink[setServerNodeId]['net'],
+        "security": serverListLink[setServerNodeId]['tls'],
+        "tlsSettings": {
+          "allowInsecure": False,
+          "serverName": serverListLink[setServerNodeId]['host']
+        },
+        "wsSettings": {
+          "connectionReuse": True,
+          "path": serverListLink[setServerNodeId]['path'],
+          "headers": {
+            "Host": serverListLink[setServerNodeId]['host']
+          }
+        }
+      },
+      "mux": {
+        "enabled": False,
+        "concurrency": -1
+      }
+    },
   "outboundDetour": [{
     "protocol": "freedom",
     "tag": "direct",
