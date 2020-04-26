@@ -197,7 +197,7 @@ v2rayConf = {
   }
 }
 
-json.dump(v2rayConf, open('/media/sircadogan/文档/DeepinDownload/v2ray/config.json', 'w'), indent=2)
+json.dump(v2rayConf, open('/etc/v2ray/config.json', 'w'), indent=2)
 
 print("\n重启 v2ray 服务……\n")
 subprocess.call('systemctl restart v2ray.service', shell = True)
