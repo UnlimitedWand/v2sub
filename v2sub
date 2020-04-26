@@ -19,33 +19,89 @@ if os.geteuid() != 0:
 subFilePath = os.path.expandvars('$HOME') + '/.v2sub.conf'
 # 获取订阅地址
 if not os.path.exists(subFilePath):
-    open(subFilePath, 'w+')
+    os.mknod(subFilePath)
 
 subFile = open(subFilePath, 'r')
-subLink = subFile.read().strip()
+subLinks = subFile.readlines()
 subFile.close()
 
-if not subLink:
-    print('您还没有输入订阅地址，请输入订阅地址。')
-    subLink = input('订阅地址：')
-    subFile = open(subFilePath, 'w+')
-    subFile.write(subLink)
-    subFile.close()
-else:
-    print('订阅地址：'+subLink)
-print('如果您的订阅地址有误，请删除或编辑 '+subFilePath)
+while True:
+    if not subLinks:
+        print('\n您还没有输入订阅地址，请输入订阅地址。')
+        subLink = input('订阅地址：')
+        subFile = open(subFilePath, 'w+')
+        subFile.write(subLink)
+        subFile.seek(0,0);
+        subLinks = subFile.readlines()
+        subFile.close()
+    print("\n当前订阅：")
+    for i in range(len(subLinks)):
+        subLinks[i]= subLinks[i].strip()
+        print('订阅链接'+'【' + str(i) + '】：'+subLinks[i])
+    choose = input('\n1.增加订阅链接 2.删除订阅链接 3.更换节点, 请输入（输入q退出）：')
+    if choose == 'q':
+        exit()
+    if choose == '1':
+        subLink = input('订阅地址：')            
+        subFile = open(subFilePath, 'a+')
+        subFile.write('\n'+subLink)
+        subFile.seek(0,0);
+        subLinks = subFile.readlines()
+        subFile.close()
 
+    if choose == '2':
+        while True:
+            todeleID = input("请输入要删除的订阅编号：")
+            if todeleID.isdigit():
+                todeleID = int(todeleID)
+            else:
+                print("只能输入数字！")
+                continue
+            if todeleID not in range(len(subLinks)):
+                print("输入的编号不存在！\n")
+                continue
+            if re.search('[yesYES]', input('确定要删除该订阅吗？[y/N] ')):
+                break
+        del(subLinks[todeleID])
+        subFile = open(subFilePath, 'w')
+        subFile.writelines(line + '\n' for line in subLinks)
+        subFile.close()
+
+    if choose == '3':
+        break
+
+while True:    
+    link = input('选择订阅链接: ')
+    if link.isdigit():
+        link = int(link)
+        if link not in range(len(subLinks)):
+            print("输入的编号不存在！\n")
+            continue
+        break
+    else:
+        print("只能输入数字！")
+        continue
+subLink = subLinks[link]
 print("\n开始从订阅地址中读取服务器节点… 如等待时间过久，请检查网络。\n")
-
 # 获取订阅信息
 serverListLink = base64.b64decode(requests.get(subLink).text + "===").splitlines()
 for i in range(len(serverListLink)):
-    serverNode = json.loads(base64.b64decode(bytes.decode(serverListLink[i]).replace('vmess://','')))
+    serverNode = json.loads(bytes.decode(base64.b64decode(bytes.decode(serverListLink[i]).replace('vmess://',''))))
     print('【' + str(i) + '】' + serverNode['ps'])
     serverListLink[i] = serverNode
 
 while True:
-    setServerNodeId = int(input("\n请输入要切换的节点编号："))
+    while True:    
+        setServerNodeId = input("\n请输入要切换的节点编号：")
+        if setServerNodeId.isdigit():
+            setServerNodeId = int(setServerNodeId)
+            if setServerNodeId not in range(len(serverListLink)):
+                print("输入的编号不存在！\n")
+                continue
+            break
+        else:
+            print("只能输入数字！")
+            continue
     subprocess.call('ping ' + serverListLink[setServerNodeId]['add'] + ' -c 3 -w 10', shell = True)
     if re.search('[yesYES]', input('确定要使用该节点吗？[y/N] ')):
         break
@@ -141,7 +197,7 @@ v2rayConf = {
   }
 }
 
-json.dump(v2rayConf, open('/etc/v2ray/config.json', 'w'), indent=2)
+json.dump(v2rayConf, open('/media/sircadogan/文档/DeepinDownload/v2ray/config.json', 'w'), indent=2)
 
 print("\n重启 v2ray 服务……\n")
 subprocess.call('systemctl restart v2ray.service', shell = True)
