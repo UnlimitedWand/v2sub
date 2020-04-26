@@ -38,10 +38,12 @@ while True:
     for i in range(len(subLinks)):
         subLinks[i]= subLinks[i].strip()
         print('订阅链接'+'【' + str(i) + '】：'+subLinks[i])
-    choose = input('\n1.增加订阅链接 2.删除订阅链接 3.更换节点, 请输入（输入q退出）：')
+    choose = input('\n1.更换节点 2.增加订阅链接 3.删除订阅链接 , 请输入（输入q退出）：')
     if choose == 'q':
         exit()
     if choose == '1':
+        break    
+    if choose == '2':
         subLink = input('订阅地址：')            
         subFile = open(subFilePath, 'a+')
         subFile.write('\n'+subLink)
@@ -49,7 +51,7 @@ while True:
         subLinks = subFile.readlines()
         subFile.close()
 
-    if choose == '2':
+    if choose == '3':
         while True:
             todeleID = input("请输入要删除的订阅编号：")
             if todeleID.isdigit():
@@ -67,8 +69,6 @@ while True:
         subFile.writelines(line + '\n' for line in subLinks)
         subFile.close()
 
-    if choose == '3':
-        break
 
 while True:    
     link = input('选择订阅链接: ')
