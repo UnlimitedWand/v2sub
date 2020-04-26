@@ -8,6 +8,13 @@ import base64
 import json
 import subprocess
 import re
+try: 
+    import socks 
+except ImportError: 
+    print("未安装模块Pysocks!现在开始安装...")
+    subprocess.call('pip3 install pysocks', shell = True)
+    print("请重新运行程序")
+    exit()
 
 # 鉴权
 if os.geteuid() != 0:
@@ -17,6 +24,7 @@ if os.geteuid() != 0:
 # 本脚本的配置文件，目前的作用是仅存储用户输入的订阅地址，这样用户再次启动脚本时，就无需再输入订阅地址。
 # 预设的存储的路径为存储到用户的 HOME 内。
 subFilePath = os.path.expandvars('$HOME') + '/.v2sub.conf'
+subProxyPath = os.path.expandvars('$HOME') + '/.v2sub_proxy.conf' #获取订阅信息所用代理配置
 # 获取订阅地址
 if not os.path.exists(subFilePath):
     os.mknod(subFilePath)
@@ -82,9 +90,35 @@ while True:
         print("只能输入数字！")
         continue
 subLink = subLinks[link]
+proxy_flag=False
+proxy_old = "socks5://127.0.0.1:10808"
+if re.search('[yesYES]', input('通过代理获取订阅信息？[y/N] ,默认N：')):
+    proxy_flag=True
+    if not os.path.exists(subProxyPath):
+        os.mknod(subProxyPath)
+    proxyFile = open(subProxyPath, 'r')
+    proxy = proxyFile.readline()
+    proxyFile.close()    
+    if proxy:
+        proxy_old = proxy
+    proxy_new = input('默认代理地址为'+proxy_old+'。请输入地址：')
+    '''if re.search('[socks5]', proxy_new):
+        subprocess.call('pip3 install pysocks', shell = True)
+    '''
+    if proxy_new and proxy_new !=  proxy_old:
+        proxyFile = open(subProxyPath, 'w')
+        proxy = proxyFile.write(proxy_new)
+        proxyFile.close()
+        proxy = proxy_new
+    else:
+        proxy = proxy_old
+    proxies = {'http': proxy, 'https': proxy}
 print("\n开始从订阅地址中读取服务器节点… 如等待时间过久，请检查网络。\n")
 # 获取订阅信息
-serverListLink = base64.b64decode(requests.get(subLink).text + "===").splitlines()
+if proxy_flag:
+    serverListLink = base64.b64decode(requests.get(subLink,proxies=proxies).text + "===").splitlines()
+else:
+    serverListLink = base64.b64decode(requests.get(subLink).text + "===").splitlines()
 for i in range(len(serverListLink)):
     serverNode = json.loads(bytes.decode(base64.b64decode(bytes.decode(serverListLink[i]).replace('vmess://',''))))
     print('【' + str(i) + '】' + serverNode['ps'])
