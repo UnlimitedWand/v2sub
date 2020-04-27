@@ -51,93 +51,89 @@ class v2sub():
     def write_v2ray_conf(self):
         # 编辑 v2ray 配置文件
         v2rayConf = {
-          "inbound": {
-            "port": 10808,
-            "listen": "127.0.0.1",
-            "protocol": "socks",
-        	"sniffing": {
-                "enabled": True,
-                "destOverride": [
-                  "http",
-                  "tls"
-                ]
-            },
-        	"settings": {
-        		"auth": "noauth",
-                "udp": True,
-        		"ip": "127.0.0.1"
-            }
-          },
-          "outbound": {
-            "tag": "proxy",
-            "protocol": "vmess",
-            "settings":{ 
-                "vnext": [
-                  {
-                    "address": self.serverListLink[self.setServerNodeId]['add'],
-                    "port": int(self.serverListLink[self.setServerNodeId]['port']),
-                    "users": [
-                      {
-                        "id": self.serverListLink[self.setServerNodeId]['id'],
-                        "alterId": int(self.serverListLink[self.setServerNodeId]['aid']),
-        				"security": "auto"
-                      }
+            "inbound": {
+                "port": 10808,
+                "listen": "127.0.0.1",
+                "protocol": "socks",
+                "sniffing": {
+                    "enabled": True,
+                    "destOverride": [
+                        "http",
+                        "tls"
                     ]
-                  }
-                ]
-              },
-              "streamSettings": {
-                "network": self.serverListLink[self.setServerNodeId]['net'],
-                "security": self.serverListLink[self.setServerNodeId]['tls'],
-                "tlsSettings": {
-                  "allowInsecure": False,
-                  "serverName": self.serverListLink[self.setServerNodeId]['host']
                 },
-                "wsSettings": {
-                  "connectionReuse": True,
-                  "path": self.serverListLink[self.setServerNodeId]['path'],
-                  "headers": {
-                    "Host": self.serverListLink[self.setServerNodeId]['host']
-                  }
+                "settings": {
+                    "auth": "noauth",
+                    "udp": True,
+                    "ip": "127.0.0.1"
                 }
-              },
-              "mux": {
-                "enabled": False,
-                "concurrency": -1
-              }
             },
-          "outboundDetour": [{
-            "protocol": "freedom",
-            "tag": "direct",
-            "settings": {}
-          }],
-          "routing": {
-            "strategy": "rules",
-            "settings": {
-              "domainStrategy": "IPOnDemand",
-              "rules": [{
-                "type": "field",
-                "ip": [
-                  "0.0.0.0/8",
-                  "10.0.0.0/8",
-                  "100.64.0.0/10",
-                  "127.0.0.0/8",
-                  "169.254.0.0/16",
-                  "172.16.0.0/12",
-                  "192.0.0.0/24",
-                  "192.0.2.0/24",
-                  "192.168.0.0/16",
-                  "198.18.0.0/15",
-                  "198.51.100.0/24",
-                  "203.0.113.0/24",
-                  "::1/128",
-                  "fc00::/7",
-                  "fe80::/10"
-                ],
-                "outboundTag": "direct"
-              }]
+            "outbound": {
+                "tag": "proxy",
+                "protocol": "vmess",
+                "settings":{ 
+                    "vnext": [{
+                        "address": self.serverListLink[self.setServerNodeId]['add'],
+                        "port": int(self.serverListLink[self.setServerNodeId]['port']),
+                        "users": [{
+                            "id": self.serverListLink[self.setServerNodeId]['id'],
+                            "alterId": int(self.serverListLink[self.setServerNodeId]['aid']),
+                            "security": "auto"
+                        }]
+                    }]
+                },
+                "streamSettings": {
+                    "network": self.serverListLink[self.setServerNodeId]['net'],
+                    "security": self.serverListLink[self.setServerNodeId]['tls'],
+                    "tlsSettings": {
+                        "allowInsecure": False,
+                        "serverName": self.serverListLink[self.setServerNodeId]['host']
+                    },
+                    "wsSettings": {
+                        "connectionReuse": True,
+                        "path": self.serverListLink[self.setServerNodeId]['path'],
+                        "headers": {
+                            "Host": self.serverListLink[self.setServerNodeId]['host']
+                        }
+                    }
+                },
+                "mux": {
+                    "enabled": False,
+                    "concurrency": -1
+                }
+            },
+            "outboundDetour": [{
+                "protocol": "freedom",
+                "tag": "direct",
+                "settings": {}
+            }],
+            "routing": {
+                "strategy": "rules",
+                "settings": {
+                    "domainStrategy": "IPOnDemand",
+                    "rules": [{
+                        "type": "field",
+                        "ip": [
+                            "0.0.0.0/8",
+                            "10.0.0.0/8",
+                            "100.64.0.0/10",
+                            "127.0.0.0/8",
+                            "169.254.0.0/16",
+                            "172.16.0.0/12",
+                            "192.0.0.0/24",
+                            "192.0.2.0/24",
+                            "192.168.0.0/16",
+                            "198.18.0.0/15",
+                            "198.51.100.0/24",
+                            "203.0.113.0/24",
+                            "::1/128",
+                            "fc00::/7",
+                            "fe80::/10"
+                        ],
+                        "outboundTag": "direct"
+                    }]
+                }
             }
-          }
         }
         json.dump(v2rayConf, open('/etc/v2ray/config.json', 'w'), indent=2)
     #end of write_v2ray_conf
@@ -204,6 +200,7 @@ class v2sub():
         if re.search('[yesYES]', input('确定要使用该节点吗？[y/N] ')):
             self.currentNode = self.serverListLink[self.setServerNodeId]['ps']
             self.write_v2ray_conf()
+            self.write_v2sub_conf()
             print("\n重启 v2ray 服务……\n")
             subprocess.call('systemctl restart v2ray.service', shell = True)
             print('地址切换完成')
