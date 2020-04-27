@@ -35,6 +35,7 @@ class v2sub():
         self.version = self.currentVersion
         self.serverListLink = []
         self.setServerNodeId = 0
+        self.localsub = {}
 
     def write_v2sub_conf(self):
         # v2sub 配置文件, 不要轻易修改！
@@ -42,7 +43,8 @@ class v2sub():
             "version": self.currentVersion,
             "subLinks": self.subLinks,
             "proxy": self.proxy,
-            "currentNode": self.currentNode
+            "currentNode": self.currentNode,
+            "localsub": self.localsub
         }
         json.dump(v2subConf, open(self.subFilePath, 'w'), indent=2)
     #end of write_v2sub_conf
@@ -141,7 +143,7 @@ class v2sub():
     #获取节点信息
     def get_nodes(self):
         while True:    
-            num = input('选择订阅链接: ')
+            num = input('选择订阅链接（ctrl+c退出）: ')
             if num.isdigit():
                 num = int(num)
                 if num not in range(len(self.subLinks)):
@@ -152,9 +154,27 @@ class v2sub():
                 print("只能输入数字！")
                 continue
         subLink = self.subLinks[num]
+        if subLink in self.localsub and not re.search('[noNO]', input("检测到本地已有订阅信息，使用本地信息？[y/n],默认y: ")):
+            subb64 = self.localsub[subLink]
+            self.serverListLink = base64.b64decode(subb64).splitlines()
+        else:
+            if self.update_nodes(subLink):
+                print("订阅更新成功!")
+            else:
+                print("订阅更新失败!")
+                return False
+        for i in range(len(self.serverListLink)):
+            serverNode = json.loads(bytes.decode(base64.b64decode(bytes.decode(self.serverListLink[i]).replace('vmess://',''))))
+            print('【' + str(i) + '】' + serverNode['ps'])
+            self.serverListLink[i] = serverNode
+        return True
+    #end of get_nodes
+
+    #更新订阅信息
+    def update_nodes(self, subLink):
         proxy_flag=False
         proxy_old = "socks5://127.0.0.1:10808"
-        if re.search('[yesYES]', input('通过代理获取订阅信息？[y/N] ,默认N：')):
+        if re.search('[yesYES]', input('通过代理获取订阅信息？[y/n] ,默认n：')):
             proxy_flag=True    
             if self.proxy:
                 proxy_old = self.proxy
@@ -168,25 +188,23 @@ class v2sub():
         # 获取订阅信息
         try:
             if proxy_flag:
-                self.serverListLink = base64.b64decode(requests.get(subLink,proxies=proxies).text + "===").splitlines()
+                subb64 = requests.get(subLink,proxies=proxies).text + "==="
                 self.proxy = proxy
             else:
-                self.serverListLink = base64.b64decode(requests.get(subLink).text + "===").splitlines()
+                subb64 = requests.get(subLink).text + "==="
+            self.serverListLink = base64.b64decode(subb64).splitlines()
+            self.localsub[subLink] = subb64
         except Exception as e:
             print("订阅地址或代理地址无法连接! 请重新选择或填写.\n异常信息："+str(e))
             return False
         self.write_v2sub_conf()
-        for i in range(len(self.serverListLink)):
-            serverNode = json.loads(bytes.decode(base64.b64decode(bytes.decode(self.serverListLink[i]).replace('vmess://',''))))
-            print('【' + str(i) + '】' + serverNode['ps'])
-            self.serverListLink[i] = serverNode
         return True
-    #end of get_nodes
+    #end of update_nodes
 
     #切换节点
     def change_node(self):
         while True:    
-            self.setServerNodeId = input("\n请输入要切换的节点编号：")
+            self.setServerNodeId = input("\n请输入要切换的节点编号（ctrl+c退出）：")
             if self.setServerNodeId.isdigit():
                 self.setServerNodeId = int(self.setServerNodeId)
                 if self.setServerNodeId not in range(len(self.serverListLink)):
@@ -197,7 +215,7 @@ class v2sub():
                 print("只能输入数字！")
                 continue
         subprocess.call('ping ' + self.serverListLink[self.setServerNodeId]['add'] + ' -c 3 -w 10', shell = True)
-        if re.search('[yesYES]', input('确定要使用该节点吗？[y/N] ')):
+        if re.search('[yesYES]', input('确定要使用该节点吗？[y/n] ')):
             self.currentNode = self.serverListLink[self.setServerNodeId]['ps']
             self.write_v2ray_conf()
             self.write_v2sub_conf()
@@ -207,7 +225,7 @@ class v2sub():
     #end of change_node
 
     def load_config_file(self):
-        # 获取订阅地址
+        # 加载配置文件
         if not os.path.exists(self.subFilePath):
             os.mknod(self.subFilePath)
         
@@ -221,6 +239,7 @@ class v2sub():
             self.proxy = config['proxy']
             self.currentNode = config['currentNode']
             self.version = config["version"]
+            self.localsub = config["localsub"]
         except Exception as e:
             print('\n配置文件解析异常或无配置文件，将重新创建...\n异常信息："+str(e)')
             if os.path.exists(self.subFilePath):
@@ -260,7 +279,7 @@ class v2sub():
             #3.删除订阅链接
             if choose == '3':
                 while True:
-                    todeleID = input("请输入要删除的订阅编号：")
+                    todeleID = input("请输入要删除的订阅编号（ctrl+c退出）：")
                     if todeleID.isdigit():
                         todeleID = int(todeleID)
                     else:
@@ -269,8 +288,9 @@ class v2sub():
                     if todeleID not in range(len(self.subLinks)):
                         print("输入的编号不存在！\n")
                         continue
-                    if re.search('[yesYES]', input('确定要删除该订阅吗？[y/N] ')):
+                    if re.search('[yesYES]', input('确定要删除该订阅吗？[y/n] : ')):
                         break
+                del(self.localsub[self.subLinks[todeleID]])
                 del(self.subLinks[todeleID])
                 self.write_v2sub_conf()
     #end of main
